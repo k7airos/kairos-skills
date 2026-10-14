@@ -9,7 +9,7 @@
 Brief 应包含：
 - 原始正文内容
 - 具体的修改意见（来自 `feedback`）
-- 写稿格式要求（参考 writing-brief.md 中的格式要求）
+- 写稿与排版格式要求（参考 writing-brief.md 与 milkdown-writing 中的规范，保持导读、引流卡片、提示块与高亮等语法合规，确保文末保留封面高亮关键词）
 
 ## Spawn Sub-agent
 

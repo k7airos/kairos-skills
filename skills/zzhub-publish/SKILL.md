@@ -19,6 +19,27 @@ zzhub-pipeline 状态机的编排层。CLI 通过 `--view agent` 输出告诉你
 
 全局命令：`zzhub-pipeline`（或简写 `zzp`），安装后即可在任何目录执行。
 
+## 生态技能联动与插件增强
+
+为了让发布的文章与视觉产物发挥最大价值，本 Skill 与以下生态技能紧密协作：
+
+### 1. Markdown 富文本排版 — 联动 `milkdown-writing`
+
+当前 Pipeline 深度集成了 `@akairos/milkdown-article-plugins` 扩展语法规范：
+- **写稿与修订阶段**：必须参考 [`milkdown-writing`](../milkdown-writing/SKILL.md) 技能，向写稿 Sub-Agent 注入 Milkdown 增强组件规范（篇章导读 `[!INTRO]`、文末互动/引流 `[!CTA]`、标准提示块 `[!NOTE]`/`[!TIP]`、行内高亮 `==关键结论==`、快捷键 `[[kbd:Cmd]]` 与彩色徽章 `[badge:brand|文案]`）。
+- **审核阶段**：根据 Milkdown 规范校验卡片是否被无 `>` 的普通空行截断，并过滤不支持的 LaTeX、Mermaid、文内锚点跳转等微信不支持能力。
+
+### 2. 视觉渲染插件 — 联动 `typeset-studio` / 自定义 ImageRenderer
+
+Pipeline 支持通过配置文件中的 `plugins.imageRenderer` 接入外部渲染插件（如 `@akairos/typeset-studio/adapter`）：
+- **检测插件**：可通过 `zzp config --key plugins.imageRenderer` 检查当前是否启用了 Typeset Studio。
+- **模板与封面**：启用 Typeset Studio 时，微信大图头图、多比例排版和视觉封面由 Studio 模板渲染。在写稿与 `prepare` 阶段提取的高质量 `--highlight-words` 会直接驱动 Studio 封面的核心文字排版与高亮效果。
+- **素材同步**：若使用自定义模板素材，提示用户使用 `zzp typeset-assets-sync` 同步本地素材至 COS CDN 并打包为运行时配置。
+
+### 3. 文风去 AI 味 — 联动 `humanizer-zh` / `zzhub-writer-style`
+
+写稿 Brief 必须强制执行去 AI 味约束；若用户要求改得更像真人或精修中文 AI/技术文章，适时提示调用 `humanizer-zh` 或 `zzhub-writer-style`。
+
 ## 核心循环
 
 严格按以下顺序执行，不许跳过或打乱：
@@ -40,9 +61,13 @@ zzhub-pipeline 状态机的编排层。CLI 通过 `--view agent` 输出告诉你
 
 适用动作：`prepare`、`prepare-finalize`、`render`、`publish`
 
+> **提示**：若启用了 `typeset-studio` 插件，`render` 会自动调用 Studio 模板合成头图；若使用默认 `builtin-imgx`，则使用内置 SVG/Canvas 封面布局。
+
 ### worker 执行器 — attach-body（写稿）
 
 任务需要正文内容。当 `params.spawn` 为 `true` 时，主 Agent 需要构建写作 Brief 并 spawn sub-agent 完成写作。
+
+**必须联动**：参考 [`references/writing-brief.md`](references/writing-brief.md) 与 [`milkdown-writing`](../milkdown-writing/SKILL.md) 构建 Brief，使正文结构化运用 Milkdown 语法组件并产出封面高亮关键词。
 
 **详见**：`references/writing-brief.md` — 包含工作模式说明、Brief 构建指南、格式和质量要求、交稿流程。
 
