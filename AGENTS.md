@@ -6,7 +6,7 @@
 
 ## 仓库定位与设计哲学
 
-`kairos-skills` 是 Kairos 与 `zzhub-pipeline` 整个开源内容发布生态的官方 Skill 仓库：
+`kairos-skills` 维护内容发布生态及可独立复用的通用 Skill：
 1. **单一事实来源 (Single Source of Truth)**：所有与 pipeline、Milkdown 排版、自动化发文相关的 Skill 必须以本仓库为唯一权威源文件，禁止在各个客户端目录直接分叉拷贝。
 2. **零硬编码绝对路径**：Skill 必须可移植至任意用户的机器上运行，文档和命令示例中严禁硬编码本机私有路径（如 `/Users/xxx/...`），统一使用 `{workspace}` 占位符或环境变量 `ZZHUB_PIPELINE_WORKSPACE_ROOT`。
 3. **结构标准化**：每个 Skill 均在 `skills/<skill-name>/` 下独立维护，必须具备规范的 `SKILL.md`（含完整 YAML frontmatter）。更复杂的规则应抽离至 `references/` 子目录，多 Agent 平台适配配置放置于 `agents/`。
@@ -38,10 +38,10 @@ kairos-skills/
 
 ## ⚠️ 核心注意事项与 Agent 强制行为规范
 
-### 1. 强制主动询问全局目录链接
+### 1. 全局目录链接
 
 > [!IMPORTANT]
-> **每次在本项目中新增、重命名、废弃或修改 Skill 后，Agent 必须主动询问用户是否需要将变更同步链接到全局目录，以支持系统中的各 Agent 运行时：**
+> 新增、重命名或迁移 Skill 时检查以下全局入口。用户已经要求安装、迁移或持续同步时直接执行，不重复确认；已有正确软链接的内容更新自然生效，无需重新链接。未获授权时询问是否安装：
 > - `~/.agents/skills/`（Amp、统一 Agent 中枢）
 > - `~/.codex/skills/`（Codex CLI / OpenAI）
 > - `~/.claude/skills/`（Claude Code）
@@ -50,7 +50,7 @@ kairos-skills/
 > 软链接规范：
 > 1. `~/.agents/skills/<name>` 作为主要落脚点，软链接至 `<repo_root>/skills/<name>`。
 > 2. `~/.gemini/config/skills/`、`~/.claude/skills/`、`~/.codex/skills/` 软链接至对应技能目录。
-> 3. 若用户确认，应使用 `ln -sf` 批量执行更新，或调用 `./scripts/link-skills.sh`。
+> 3. 只处理本次目标。遇到非软链接的已有目录先比较并保全，不用 `ln -sf` 假装已经替换目录；有冲突停止。无冲突的新入口可直接创建软链接。
 
 ### 2. 新增与维护 Skill 的核验清单
 
@@ -59,3 +59,5 @@ kairos-skills/
 - [ ] 检查全文是否有绝对路径硬编码，确保示例命令可泛化。
 - [ ] 同步在 `README.md` 中的「技能清单」更新条目与概括说明。
 - [ ] 废弃不再需要的 Skill 时，需同步移除全局目录中对应的软链接，避免留下悬空断链（dangling symlink）。
+- [ ] 公共协议不包含私有知识内容、真实用户路径、账号或凭据；个人与组织策略留在各自Vault。
+- [ ] 每次完成本次变更都检查差异、明确暂存路径、创建commit并推送；不纳入其他会话的已有修改，不强推或amend他人提交。

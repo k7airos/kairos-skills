@@ -1,0 +1,4 @@
+interface:
+  display_name: "知识资产库"
+  short_description: "渐进检索并维护个人资产、项目上下文与公司业务知识库内容"
+  default_prompt: "请使用 $knowledge-vault 查询或沉淀可长期复用的知识。"
