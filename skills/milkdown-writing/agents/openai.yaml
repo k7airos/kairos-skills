@@ -1,4 +1,4 @@
 interface:
   display_name: "Milkdown 写作语法"
-  short_description: "使用当前 Milkdown 语法写作，含导读、引流卡片与微信导出规则"
+  short_description: "使用 myno / Pipeline 共享语法写作，含导读、互动卡片与微信导出规则"
   default_prompt: "使用 $milkdown-writing，按当前支持的 Markdown 语法整理这篇文章，按需要加入导读和文末互动卡片。"

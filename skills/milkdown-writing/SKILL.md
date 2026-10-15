@@ -1,7 +1,7 @@
 ---
 name: milkdown-writing
 description: >-
-  按当前 Nezus / Pipeline 接入的 Milkdown 语法撰写、整理和检查 Markdown 文章，
+  按当前 myno / Pipeline 接入的 Milkdown 语法撰写、整理和检查 Markdown 文章，
   包括导读 INTRO、文末引流/互动 CTA、Callout、高亮、徽章和快捷键。
   用户要求公众号 Markdown 排版、添加导读或引流卡片、了解自定义语法，
   或更新 Milkdown 写作语法规范时使用。写作时遵守微信导出限制。
@@ -10,7 +10,7 @@ description: >-
 
 # Milkdown 写作语法
 
-让 Agent 写出的 Markdown 能被当前编辑器和 Pipeline 正确解析。支持范围以实际接入的解析器和微信导出链路为准，不能把 Milkdown 的可选插件都当成已支持。
+让 Agent 写出的 Markdown 能被 myno、Pipeline 和复用它们的宿主正确解析。支持范围以实际接入的解析器和微信导出链路为准，不能把 Milkdown 的可选插件都当成已支持。
 
 ## 写作时
 
@@ -57,6 +57,12 @@ description: >-
 检查卡片是否被无 `>` 的空行截断，标识及徽章类型是否有效，图片和引流地址是否来自真实资料。微信导出会自动整理外链引用，不承诺保留外链点击、交互任务框或文内锚点跳转。公式、Mermaid、脚注、折叠块等未接入能力不要当成可发布组件。
 
 普通写作无需启动服务或试发草稿。用户要求验证导出时，再使用现有导出流程；本 skill 不授权发布、上传或部署。
+
+## 样式与执行的分工
+
+Markdown 语法与排版配置分开维护。myno 可独立调样式、复制富文本并导出 `wechat-style.json`，不需要 Pipeline 或公众号凭据；Pipeline 通过可选 myno 插件读取同类配置，也保留内置排版器。Typeset Studio 负责封面与贴图 PNG，不改变正文语法。
+
+用户要求切换插件、选择独立 JSON 或同步配置时，查阅 [排版接入参考](../zzhub-publish/references/rendering.md)；需要执行发布任务再用 [zzhub-publish](../zzhub-publish/SKILL.md)。只写文章时不要自动保存账号主题、上传素材或改全局配置。
 
 ## 维护此 skill
 

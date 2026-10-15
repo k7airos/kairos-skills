@@ -13,9 +13,9 @@ Official Agent Skills for the Kairos & `zzhub-pipeline` publishing ecosystem.
 | Skill | 目录 | 适用场景与主要功能 |
 | :--- | :--- | :--- |
 | **`knowledge-vault`** | [`skills/knowledge-vault/`](skills/knowledge-vault/SKILL.md) | 通用 Markdown / Obsidian 知识库检索、复用和渐进沉淀。以独立 Vault 策略隔离个人与组织，支持简单更新、Git 内容同步、TODO / handoff 和已授权的周期回顾；真实注册表与知识内容留在用户环境。 |
-| **`milkdown-writing`** | [`skills/milkdown-writing/`](skills/milkdown-writing/SKILL.md) | **Milkdown 写作排版规范**<br>按当前 Nezus / Pipeline 接入的 Milkdown 扩展语法撰写与校验 Markdown。涵盖篇章导读卡片（`[!INTRO]`）、文末引流/互动卡片（`[!CTA]`）、标准提示块（`NOTE`/`TIP`/`WARNING` 等）、行内高亮（`==文本==`）、快捷键徽章（`[[kbd:Cmd]]`）、彩色标签（`[badge:brand\|文本]`）以及微信 HTML 安全导出规则。 |
-| **`zzhub-publish`** | [`skills/zzhub-publish/`](skills/zzhub-publish/SKILL.md) | **内容发布流水线编排**<br>编排 `zzhub-pipeline` CLI 状态机完成微信公众号图文（article）、图文消息贴图（newspic）与博客的多目标发布。**深度联动 `milkdown-writing` 扩展排版语法与 `typeset-studio` 视觉合成插件**，指导 Agent 处理多子 Agent 协作写稿、内容审核（Review）、修改建议反馈（Revision）、图片渲染及草稿发布。 |
-| **`auto-ai-daily`** | [`skills/auto-ai-daily/`](skills/auto-ai-daily/SKILL.md) | **全自动每日 AI 日报发文流水线**<br>无人值守自动化流水线。从 AIHOT API 实时抓取今日热门前五条，扩写为 1000-1200 字客观纪实报道，应用 `humanizer-zh` 彻底去除 AI 腔调，并调用 pipeline 直接发布至指定微信公众号。 |
+| **`milkdown-writing`** | [`skills/milkdown-writing/`](skills/milkdown-writing/SKILL.md) | **正文语法与微信导出规则**<br>按 myno / Pipeline 共享语法写作和整理 Markdown，按需使用导读、互动卡、Callout、高亮、快捷键与徽章；与样式配置、封面渲染和发布操作分工明确。 |
+| **`zzhub-publish`** | [`skills/zzhub-publish/`](skills/zzhub-publish/SKILL.md) | **内容发布任务编排**<br>按 `status → next_action` 准备正文、审核修订、渲染并写入草稿箱，也支持博客和多目标。包含 myno 可选正文插件、独立样式 JSON、Typeset 本地插件、运行时素材及失败恢复说明。 |
+| **`auto-ai-daily`** | [`skills/auto-ai-daily/`](skills/auto-ai-daily/SKILL.md) | **AI 资讯自动草稿流程**<br>使用 AIHOT v1 API 获取最近 24 小时最多五条精选，基于可核验来源写稿，自检后按状态机串行写入指定公众号草稿箱；不创建定时任务、不群发。 |
 
 ---
 

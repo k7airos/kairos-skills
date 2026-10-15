@@ -1,6 +1,6 @@
 # 当前 Milkdown 语法与微信导出规则
 
-核对日期：2026-10-15。Pipeline 0.19.0 可使用内置导出或 myno 0.3.0 浏览器排版入口，两者均使用 `commonmark + gfm + getCombinedMilkdownPlugins()`。本次发布的锁文件使用语法插件 0.1.6、共享样式 0.1.2；各消费方依赖范围和安装结果可能不同，以各自清单及锁文件为准。语法实现见 [Milkdown Article Plugins](https://github.com/k7airos/milkdown-article-plugins)，正文工作台见 [myno](https://github.com/k7airos/myno)，发布与微信限制见 [Pipeline](https://github.com/k7airos/zzhub-pipeline)。
+核对日期：2026-10-15。Pipeline 0.19.0 可使用内置导出或 myno 0.3.0 浏览器排版入口，两者均使用 `commonmark + gfm + getCombinedMilkdownPlugins()`。发布基线使用语法插件 0.1.6、共享样式 0.1.2；各消费方依赖范围、安装结果及已构建 bundle 可能不同，先核对配置选中的 renderer。语法实现见 [Milkdown Article Plugins](https://github.com/k7airos/milkdown-article-plugins)，正文工作台见 [myno](https://github.com/k7airos/myno)，发布与微信限制见 [Pipeline](https://github.com/k7airos/zzhub-pipeline)。
 
 按需查阅：基础 Markdown、篇章卡片、提示块、行内扩展、图片、微信导出边界、维护依据。基础语法可用不等于文章必须采用列表等结构；配合作者已有的写作风格使用。
 
@@ -167,20 +167,19 @@ YAML frontmatter 是 Pipeline 单独处理的文章元数据，导出前会移�
 - 外部 HTTP(S) 链接转换为文字和 `[n]` 编号，末尾自动追加「相关链接」。重复 URL 会合并，规范化时忽略 fragment 等差异；不用自行再编一套编号。文末 CTA 后可能还有自动相关链接和账号页脚。
 - 相对链接、锚点和邮箱不等于已验证的微信导航；不承诺文内锚点跳转或邮箱点击效果。
 - 任务框静态展示；代码只展示文本；编辑器中的按钮、拖拽和交互不会变成微信文章交互。
-- 标题、分隔线、高亮等会转换为微信安全标签并内联样式，具体外观服从账号主题与 CSS。`pillar`、`magazine`、`mac-style` 等预设名属于配置，不是 Markdown 语法。
+- 标题、分隔线、高亮等会转换为微信安全标签并内联样式，具体外观服从已选择的独立样式或账号主题与 CSS。`pillar`、`magazine`、`short-center` 等预设名属于配置，不是 Markdown 语法；当前工作台没有 `mac-style` 代码预设。
 - 原始 HTML 会经过清理，脚本、iframe、SVG、公式标签、表单、音视频等危险或不兼容节点会被移除。不要手写 HTML/CSS 布局或把它当成绕过组件限制的方法。
 
 当前发布链路未接入以下能力：LaTeX / KaTeX（`$...$` / `$$...$$`）、Mermaid 绘图、脚注 `[^1]`、自动目录 `[TOC]`、容器指令 `:::...`、Obsidian 双链与嵌入、折叠块、自定义 Emoji 短码。若作为代码示例展示，可放代码围栏；若要作为真实组件使用，需先确认目标宿主的解析与导出均已接入。其他宿主可能另有可选插件，不能据此推定 Pipeline 支持。
 
 ## 维护依据与刷新流程
 
-本机已验证入口：
+先用 `zzp config --key plugins.markdownRenderer` 确认实际入口，再按所选包核对：
 
-- `zzhub-pipeline` 源码中 `src/wechat-preview/browser/editor-export.ts`：实际解析组合。
-- `zzhub-pipeline` 源码中 `src/wechat-preview/browser/studio/studio.ts`：排版 Studio 使用的解析组合。
-- Pipeline 安装的 `node_modules/@akairos/milkdown-article-plugins/dist/registry.js` 与 `builtin-*.js`：生效的插件注册与解析实现。
+- myno 插件：`myno/src/studio/editor-export.ts`、`src/studio/studio.ts`、`src/studio/wechat-renderer.ts` 与 `src/studio/syntax-presets.ts`；实际运行加载 npm 包 `dist/editor-export.js`、`dist/studio.js`，修改源码需重建并更新包。
+- 内置入口：`zzhub-pipeline/src/wechat-preview/browser/editor-export.ts`、`src/wechat-preview/browser/studio/studio.ts`、`src/wechat-preview/wechat-renderer.ts`；实际运行加载 Pipeline 的浏览器 bundle。
+- 所选消费方安装的 `node_modules/@akairos/milkdown-article-plugins/dist/registry.js` 与 `builtin-*.js`：插件注册与解析实现。更新未打入 bundle 的依赖，不会自动改变已构建页面。
 - `milkdown-article-plugins` 源码中 `src/`：自定义插件开发源码；必须核对已安装版本，源码改动不等于宿主已经生效。
-- `zzhub-pipeline` 源码中 `src/wechat-preview/wechat-renderer.ts`：图片图注、缩放、外链、静态任务框和微信安全输出。
 - `zzhub-pipeline` 源码中 `src/wechat-preview/fixtures/all-nodes.md`：节点验收稿，含清理危险 HTML 的测试内容，不能直接作为写作模板。
 
 维护时在实际消费插件的项目根目录查询已安装注册表：

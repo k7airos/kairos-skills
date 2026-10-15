@@ -1,158 +1,61 @@
 ---
 name: zzhub-publish
-description: 编排 zzhub-pipeline 状态机完成内容发布。当用户需要发布微信公众号文章或图文消息、创建草稿、或管理发布任务时使用。覆盖完整的 prepare→render→publish 流程。
+description: 编排 zzhub-pipeline CLI 状态机，准备文章或贴图、审核修订并创建或更新微信公众号草稿，也支持博客同步、多目标发布和任务恢复。需要执行或管理发布任务时使用；仅写作语法用 milkdown-writing，仅调样式或导出配置不必创建发布任务。
 ---
 
-# zzhub-publish — 内容发布 Agent
+# zzhub-publish — 发布任务编排
 
-zzhub-pipeline 状态机的编排层。CLI 通过 `--view agent` 输出告诉你**要做什么**，本 skill 覆盖**具体怎么做**，特别是需要 AI 判断的环节（写稿、审核、修订）。
+Pipeline 负责确定性的状态、渲染和发布，Agent 负责正文、事实核验、审核与修订。微信 `publish` 创建或更新草稿，不群发；博客路由执行配置的发布命令。执行到用户指定的终点：只预览时不调用 `publish`，已有发布授权不重复询问。
 
-## 前置信息
+## 环境与工作区
 
-开始前先确认 workspace 路径。按优先级尝试：
-
-1. 问用户："workspace 路径是什么？"
-2. 检查环境变量 `ZZHUB_PIPELINE_WORKSPACE_ROOT`
-3. 执行 `zzhub-pipeline config --key paths.workspaceRoot` 读取配置中的默认值
-
-后续示例中用 `{workspace}` 表示 workspace 路径。
-
-全局命令：`zzhub-pipeline`（或简写 `zzp`），安装后即可在任何目录执行。
-
-## 生态技能联动与插件增强
-
-为了让发布的文章与视觉产物发挥最大价值，本 Skill 与以下生态技能紧密协作：
-
-### 1. Markdown 富文本排版 — 联动 `milkdown-writing`
-
-当前 Pipeline 深度集成了 `@akairos/milkdown-article-plugins` 扩展语法规范：
-- **写稿与修订阶段**：必须参考 [`milkdown-writing`](../milkdown-writing/SKILL.md) 技能，向写稿 Sub-Agent 注入 Milkdown 增强组件规范（篇章导读 `[!INTRO]`、文末互动/引流 `[!CTA]`、标准提示块 `[!NOTE]`/`[!TIP]`、行内高亮 `==关键结论==`、快捷键 `[[kbd:Cmd]]` 与彩色徽章 `[badge:brand|文案]`）。
-- **审核阶段**：根据 Milkdown 规范校验卡片是否被无 `>` 的普通空行截断，并过滤不支持的 LaTeX、Mermaid、文内锚点跳转等微信不支持能力。
-
-### 2. 视觉渲染插件 — 联动 `typeset-studio` / 自定义 ImageRenderer
-
-Pipeline 支持通过配置文件中的 `plugins.imageRenderer` 接入外部渲染插件（如 `@akairos/typeset-studio/adapter`）：
-- **检测插件**：可通过 `zzp config --key plugins.imageRenderer` 检查当前是否启用了 Typeset Studio。
-- **模板与封面**：启用 Typeset Studio 时，微信大图头图、多比例排版和视觉封面由 Studio 模板渲染。在写稿与 `prepare` 阶段提取的高质量 `--highlight-words` 会直接驱动 Studio 封面的核心文字排版与高亮效果。
-- **素材同步**：若使用自定义模板素材，提示用户使用 `zzp typeset-assets-sync` 同步本地素材至 COS CDN 并打包为运行时配置。
-
-### 3. 文风去 AI 味 — 联动 `humanizer-zh` / `zzhub-writer-style`
-
-写稿 Brief 必须强制执行去 AI 味约束；若用户要求改得更像真人或精修中文 AI/技术文章，适时提示调用 `humanizer-zh` 或 `zzhub-writer-style`。
+- CLI 使用 Bun：`bun add -g @akairos/pipeline`。先用 `zzp --version` / `zzp --help` 核对已安装能力；本指南以 Pipeline 0.19.0 为基线。源码命令与全局安装包可能不同。
+- 工作区优先采用用户指定路径，再查 `ZZHUB_PIPELINE_WORKSPACE_ROOT`、`zzp config --key paths.workspaceRoot`；无法确定才询问。示例中的 `{workspace}`、`{state_path}` 必须替换为实际路径并加引号。
+- 使用已确认的账号键，按需读取 `wx.defaultAccount` 和账号显示名。不要把“大号/小号”硬编码到某个个人账号，也不要输出凭据或使用 `config --raw` 探查配置。
+- 微信写草稿依赖兼容的 `/api/v1/wx/*` 中转服务、账号凭据和 PAT；Pipeline 不直连微信官方 API。仅本地排版不需要微信凭据。
 
 ## 核心循环
 
-严格按以下顺序执行，不许跳过或打乱：
+1. 用户给出 state 或 handoff 时使用它；否则 `zzp find-run --workspace "{workspace}" --active --view agent` 查找相关任务。无匹配会报 `No matching task found`，不是返回空列表；多个候选用 `tasks` 和账号/标题过滤定位，不接续无关任务。
+2. 没有对应任务才 `init`；已有交接 JSON 用 `ingest-handoff`。
+3. `zzp status --state "{state_path}" --view agent`，读取 `next_action`、`gaps`、`blockers`。
+4. 只执行当前动作；每步后重新 `status`。`prepare-finalize` 后使用返回的规范 `state_path`，正文存于 `asset_path/post.md`。
+5. 达到用户终点或 `complete` 时报告结果；遇到缺少素材或未解决的失败，保留原 run 和原因。
 
-1. **查找任务**：`zzhub-pipeline find-run --workspace {workspace} --active --view agent`
-2. **检查状态**：`zzhub-pipeline status --state {state_path} --view agent`
-3. **执行** `next_action.action` 指定的动作（见下方各处理器）
-4. **重复** 直到 `next_action.action` 为 `complete`
+不手写 `workflow-state.json`，也不靠猜测串行执行整套命令。CLI 不内置 LLM，`review` 只记录判断。`params.spawn` 是编排建议；有可用且获准的委派能力时可交给子代理，否则主 Agent 按相同要求执行。
 
-如果 `find-run` 返回空，先创建任务（见下方"任务创建"）。
+## 当前动作
 
-## 动作处理器
+| 动作 | 处理方式 |
+| --- | --- |
+| `attach-body` | 已有正文直接挂载文件；需写作时读 [写稿参考](references/writing-brief.md)，按 `worker_mode`、调研与改写权限生产正文 |
+| `prepare` / `prepare-finalize` / `render` / `publish` | 执行 `next_action.command`；填实占位符。标题和封面词在 `prepare` 传入，模板与样式见 [排版接入](references/rendering.md) |
+| `review-content` | 读 [审核参考](references/content-review.md)，核验正文后记录 `passed` 或具体的 `needs_revision` 反馈；明确的 `trust_user` 策略按状态输出处理 |
+| `revise-content` | 读 [修订参考](references/revision-brief.md)，按 feedback 修改并重新挂载；之后通常先 `prepare` 再审核，以状态为准 |
+| `attach-body-images` | 读取 `required_inputs`，已有真实素材可直接挂载；缺失时向用户取得，不编造图片路径 |
+| `reset-or-repair` / `resolve-handoff` / `checkpoint` | 先执行只读 `checkpoint` 诊断，再按失败阶段恢复，见下文 |
+| `complete` | 报告标题、账号/路由、规范 state 路径及各目标结果；微信成功项给出 `external_id`（草稿 media_id） |
 
-从 `status --view agent` 输出中读取 `next_action`，按匹配的处理器执行：
+写作或修订微信公众号正文时参考 [milkdown-writing](../milkdown-writing/SKILL.md)。组件按内容需要使用，不强制每篇加入导读、引流、徽章或高亮；文风服从用户。用户要求润色时可用当前环境可用的文风技能，不为流程自动安装新技能。
 
-### cli 执行器
+## 创建与交接
 
-直接执行 `## Suggested Command` 下的命令（已经是 `zzhub-pipeline` 格式），完成后重新 `status`。
-
-适用动作：`prepare`、`prepare-finalize`、`render`、`publish`
-
-> **提示**：若启用了 `typeset-studio` 插件，`render` 会自动调用 Studio 模板合成头图；若使用默认 `builtin-imgx`，则使用内置 SVG/Canvas 封面布局。
-
-### worker 执行器 — attach-body（写稿）
-
-任务需要正文内容。当 `params.spawn` 为 `true` 时，主 Agent 需要构建写作 Brief 并 spawn sub-agent 完成写作。
-
-**必须联动**：参考 [`references/writing-brief.md`](references/writing-brief.md) 与 [`milkdown-writing`](../milkdown-writing/SKILL.md) 构建 Brief，使正文结构化运用 Milkdown 语法组件并产出封面高亮关键词。
-
-**详见**：`references/writing-brief.md` — 包含工作模式说明、Brief 构建指南、格式和质量要求、交稿流程。
-
-快速流程：
-1. 读取 `references/writing-brief.md`，按指南构建写作 Brief
-2. Spawn sub-agent（general-purpose），prompt 只包含 Brief 和格式规范
-3. Sub-agent 返回正文后，提取封面关键词，执行 `attach-body` 交稿
-4. 后续 `prepare` 时传入 `--highlight-words` 参数
-
-### worker 执行器 — review-content（审核）
-
-主 Agent 应 spawn sub-agent 进行独立审核，保持客观性并避免主上下文污染。
-
-**详见**：`references/content-review.md` — 包含审核 Brief 构建指南和审核标准。
-
-快速流程：
-1. 读取 `references/content-review.md`，获取审核标准
-2. 读取正文，连同审核标准一起交给 sub-agent
-3. Sub-agent 返回结论后，执行 `review --status passed` 或 `review --status needs_revision --feedback "..."`
-
-### worker 执行器 — revise-content（修订）
-
-`next_action.params.feedback` 中包含修改意见。主 Agent 构建修订 Brief，spawn sub-agent 执行修订。
-
-**详见**：`references/revision-brief.md` — 包含修订 Brief 构建指南。
-
-快速流程：
-1. 读取 `references/revision-brief.md`
-2. 读取正文和 `feedback`，构建修订 Brief，spawn sub-agent
-3. Sub-agent 返回修改后的正文，执行 `attach-body` 交稿
-4. 重新 `status`，下一步通常是 `review-content`
-
-### await-input 执行器
-
-任务需要用户输入（如图片素材）。`required_inputs` 列出了需要什么。向用户询问，然后把用户提供的值替换到 `{images_json_path}` 等占位符中，执行建议的命令。
-
-适用动作：`attach-body-images`
-
-### repair 执行器
-
-执行建议的 `checkpoint` 命令进行诊断，根据输出判断。如果任务已失败且无法恢复，告知用户并建议 `reset --mode full`。
-
-适用动作：`reset-or-repair`、`resolve-handoff`
-
-### complete 执行器
-
-向用户报告最终状态：标题、路由、发布结果（如有）。任务完成。
-
-适用动作：`complete`
-
-## 任务创建
-
-当 `find-run` 返回空时，先创建任务。询问用户想发布什么内容，然后：
+从用户已有需求提取内容、账号与目标；仅缺少必要信息才询问。
 
 ```bash
-zzhub-pipeline init \
-  --workspace {workspace} \
-  --task-kind publish \
-  --content-form article \
-  --targets wechat \
-  --content-origin user \
-  --intent-text "{用户的中文需求描述}"
+zzp init --workspace "{workspace}" --task-kind publish \
+  --content-form article --content-origin user --targets wechat \
+  --account "{account}" --intent-text "{用户需求}"
+zzp status --state "{state_path}" --view agent
 ```
 
-账号映射：
-- "大号" / "早早集市" / "default" → 默认账号
-- "小号" / "古一" / "ancientone" → 使用 `--account ancientone`
+外部素材用 `--content-origin external`；仅整理稿件用适合的非 publish 任务类型。贴图用 `--content-form newspic`，按需在 render 前 `attach-newspic-spec`。博客-only 路由跳过 render。可选参数：
 
-图文消息（图片合集）用 `--content-form newspic --requires-render`。
+- `--article-theme "{style_json_or_theme_dir}"`：正文样式，与发布账号分离。
+- `--existing-draft-media-id "{media_id}"`：更新已确认的现有草稿。
+- `--note-id "{note_id}"`：关联调用方笔记标识；不是所有宿主都提供回调。
 
-可选参数：
-- `--existing-draft-media-id MEDIA_ID` — 更新已有草稿而非新建
-- `--note-id NOTE_ID` — 关联 Nezus note，发布成功后自动回调通知
-
-`init` 执行后 CLI 会输出 `state_path`。将其传给 `status --view agent` 继续循环。
-
-### Handoff 入口（ingest-handoff）
-
-当人类或外部系统已准备好 body 文件，通过 JSON 交接：
-
-```bash
-zzhub-pipeline ingest-handoff --file {handoff.json 的路径}
-```
-
-新建任务的 handoff JSON 必须包含 `user_intent_text`（用于路由解析）：
+已有正文文件时可写交接 JSON；`body_path` 使用实际绝对路径，`target_account` 替换为已确认的配置键：
 
 ```json
 {
@@ -160,80 +63,56 @@ zzhub-pipeline ingest-handoff --file {handoff.json 的路径}
     "mode": "new",
     "content_form": "article",
     "body_path": "/abs/path/body.md",
-    "target_account": "default",
+    "target_account": "ACCOUNT_KEY",
     "title": "文章标题",
-    "user_intent_text": "发公众号文章给大号，标题是..."
+    "user_intent_text": "将这篇文章写入指定公众号草稿箱",
+    "review_policy": "required"
   }
 }
 ```
 
-ingest 后 body 已自动挂载。运行 `status --view agent` 从 CLI 指示的位置继续——通常是 `prepare`（元数据完整时）或 `review-content`（review_policy 为 `trust_user` 时）。
-
-## 错误恢复
-
-CLI 命令失败时：
-1. 仔细阅读错误信息
-2. 大部分错误可修复：文件缺失、状态异常、Chrome 未安装
-3. 修复问题后重新执行同一命令
-4. 如果错误持续或含义不明，运行 `zzhub-pipeline checkpoint --state {state_path}` 诊断
-5. **绝对不要**直接修改 `workflow-state.json`
-
-## 草稿箱管理
-
-任务创建或发布前，可以用以下命令查看或删除微信草稿箱中的草稿：
-
 ```bash
-# 列出最近 20 篇草稿（账号不传时使用 wx.defaultAccount 默认值）
-zzhub-pipeline wx-drafts --limit 10
-
-# 获取某篇草稿的完整内容（含 HTML）
-zzhub-pipeline wx-drafts --media-id MEDIA_ID
-
-# 删除一篇草稿
-zzhub-pipeline wx-draft-delete --media-id MEDIA_ID
+zzp ingest-handoff --workspace "{workspace}" --file "{handoff_json}"
+zzp status --state "{state_path}" --view agent
 ```
 
-`--account` 参数可选，默认使用配置中的 `wx.defaultAccount`。指定账号：`--account ancientone`。
+从 `accepted_handoff.state_path` 或 `summary.state_path` 取得 ingest 后的实际路径，不假定所有命令都在 JSON 顶层返回 `state_path`。
 
-发布完成后，如果需要清理草稿箱（例如更新已有草稿后想删掉旧版本），用 `wx-drafts` 查到旧版 `media_id`，然后 `wx-draft-delete` 删除。
+`trust_user` 只用于调用方明确批准的正文，不因来自用户或为了绕过阻塞而自行启用。它不省略 `prepare`。继续原任务用 `workflow_handoff.mode="resume"` 和 `state_path`；正文、标题或路由改变会使派生结果失效，重新读状态。原 `publish_handoff` 简化格式仍支持，但字段契约不同，先核对已安装版本。
 
-## 多账号/多平台发布
+## 恢复与验证
 
-### init 时指定多目标
-
-```bash
-# 多目标（逗号分隔 route@account 格式）
-zzp init --workspace ws \
-  --targets "wechat-article@default,wechat-article@ancientone,blog@default" \
-  --task-kind publish --content-form article --content-origin user
-
-# 无 @ 时使用 --account 值
-zzp init --workspace ws --targets "wechat-article,blog" --account ancientone
-```
-
-单目标时 `publish_targets` 为空（向后兼容）。多目标时写入 `publish_targets`，publish 阶段一次性并行发布。
-
-### 事后追加发布（republish）
-
-任务完成后（mode=done），追加发布到其他账号/平台：
+- 确定性的本地错误（文件、字体、模板、插件缺失）修好后读状态；图片 render 失败可 `reset --mode render`，正文修改重新 `attach-body`。不要自动切模板、改插件或清空数据。
+- 发布超时、`WX_RESULT_UNKNOWN`、Worker `interrupted` 或网络断连时，先查原 run 的结果和目标草稿箱。不能认定失败就没有写入，不能自动换幂等键或创建新任务。
+- `reset --mode publish` 会更新请求幂等身份，只能在核对草稿并确认重试后使用。`reset --mode full` 是放弃原任务，不是通用修复；放弃需符合用户意图。
+- 任务完成不等于每个外部目标都已验收。需要真实验收时，从微信草稿箱回读标题/内容，并分别报告本地产物、草稿写入与回读结果。
 
 ```bash
-# 简写：同路由不同账号
-zzp republish --state {state_path} --account ancientone
-
-# 多目标
-zzp republish --state {state_path} --targets "wechat-article@ancientone,blog@default"
-
-# 混合
-zzp republish --state {state_path} --account ancientone --targets "blog@default"
+zzp wx-drafts --account "{account}" --limit 10
+zzp wx-drafts --account "{account}" --media-id "{media_id}"
+# 仅在用户要求清理指定草稿时执行
+zzp wx-draft-delete --account "{account}" --media-id "{media_id}"
 ```
 
-**前置条件**：
-- `asset_path` 存在（产物已生成）
-- `content_review.status = passed`
+不因完成测试自动删草稿；草稿管理命令不依赖创建发布任务。
 
-**行为**：
-- 并行执行所有新 targets
-- 幂等：已成功的 route+account 自动跳过
-- mode 保持 done，结果追加到 `publish.results[]`
-- 有失败时返回错误详情
+## 多目标与追加发布
+
+创建多目标任务时使用真实账号键：
+
+```bash
+zzp init --workspace "{workspace}" --task-kind publish \
+  --content-form article --content-origin user \
+  --targets "wechat-article@{account_a},wechat-article@{account_b},blog@{blog_account}"
+```
+
+已有产物且审核通过后，可用 `republish` 追加目标；按 route+account 和产物版本做幂等过滤，结果写入 `publish.results`，不改变原 mode。它不是修改正文后的重新排版入口。带 `existing_draft_media_id` 的任务不能把该草稿 ID 用到另一个微信目标。
+
+```bash
+zzp republish --state "{state_path}" --account "{other_account}" --dry-run
+zzp republish --state "{state_path}" --account "{other_account}"
+```
+
+## 云端边界
+
+自托管 Worker 是 Pipeline 源码仓库中的独立服务，不包含在 npm CLI 包内。应用后端提交已确认的 `article/newspic` 正文，Worker 串行执行支持的 CLI 动作；它不替 Agent 调研、写稿或修订。后端负责用户与账号归属，服务令牌不下发浏览器。轮询有步骤、结果和可选当前动作进度；本机 Monitor 的 HTTP/SSE 是另一套接口。接入或部署时查 [Worker 契约](https://github.com/k7airos/zzhub-pipeline/blob/main/services/cloud-worker/README.md)，单纯发文不改生产配置或部署。
