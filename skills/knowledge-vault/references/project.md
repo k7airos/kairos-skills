@@ -41,7 +41,7 @@ knowledge/
 - 架构基线：pinned commit（见下）。
 - 敏感边界：哪些配置/密钥只记受控引用，不落值。
 
-## 业务页 business/&lt;module&gt;.md
+## 业务页 `business/<module>.md`
 
 贴近真实用户需求的简化产品规格，写：
 
@@ -55,7 +55,7 @@ knowledge/
 
 不写：按钮、表头、页面布局等 UI 细节；具体代码实现；接口字段级罗列（除非字段语义本身就是业务规则）。
 
-## 架构页 architecture/&lt;module&gt;.md
+## 架构页 `architecture/<module>.md`
 
 给 AI 读完后写计划或直接动手用的，写高层次设计而非实现：
 

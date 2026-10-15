@@ -1,6 +1,6 @@
 # Obsidian访问
 
-Obsidian是可选内容适配器，文件系统中的Markdown才是存储。只有注册preferred=obsidian-cli时优先CLI，不依赖社区插件。
+Obsidian是可选内容适配器，文件系统中的Markdown才是存储。只有注册preferred=obsidian-cli时优先CLI，不依赖社区插件。CLI命令语法基于 Obsidian 官方 CLI（`obsidian` 命令），需 Obsidian 应用运行中；详细命令参考见 obsidian-cli skill。
 
 首次操作核对：
 

@@ -8,7 +8,12 @@
 - `explicit`：当前任务或已有明确持续授权覆盖相应写入时执行；否则请求授权。
 - `auto-draft`：本 Skill 因持久知识任务触发后，可记录本次相关耐久事实；不是每次普通编码结束的全局 Hook。
 
-`promotion_policy` 决定正式知识：`explicit` 需要明确晋升授权；`auto-verified` 允许证据充分时直接更新正式页或自动晋升。纯查询始终只读。TODO 更新也遵守 write_policy，不能借“交接”绕过库的授权。
+`promotion_policy` 决定候选如何晋升为正式知识：
+
+- `explicit`：候选晋升需要用户明确授权。
+- `auto-verified`：来源稳定、目标唯一、无实质冲突时允许自动晋升——搭配 `auto-draft` 意味着已核验的事实可直接更新正式页而无需先进 Inbox。
+
+纯查询始终只读。TODO 更新也遵守 write_policy，不能借“交接”绕过库的授权。
 
 ## 选择最小路径
 

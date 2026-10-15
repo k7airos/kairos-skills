@@ -35,6 +35,28 @@ vaults:
       fallback: filesystem
 ```
 
+### 字段规范
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string，必填 | Vault 唯一标识符，用作知识 ID 前缀（如 `personal.project.xxx`） |
+| `display_name` | string，必填 | 面向用户的显示名称 |
+| `path` | string，必填 | 本地绝对路径，必须实际存在且不与其他 Vault 嵌套 |
+| `scope` | enum，必填 | `personal`（个人）或 `company`（组织/公司）。用于 Vault 选择时按任务上下文匹配，也标识隔离边界 |
+| `sensitivity` | enum，必填 | `private`：私有，仅向有权访问者披露。`confidential`：组织机密，仅在组织批准的上下文和环境使用。`internal`：组织内部使用，不等于允许公开；具体披露规则见下文与Vault约定 |
+| `summary` | string，必填 | 一句话描述该 Vault 的内容范围，辅助 Vault 选择 |
+| `write_policy` | enum，必填 | `read-only`：只读。`explicit`：需要用户当前任务授权或已有明确持续授权才可写入。`auto-draft`：本 Skill 因持久知识任务触发后，可自动记录本次相关耐久事实（即"可自动写入"，不限于草稿——搭配 `auto-verified` 时可直接更新正式页） |
+| `promotion_policy` | enum，必填 | `explicit`：候选晋升为正式知识需要用户明确授权。`auto-verified`：来源稳定、目标唯一、无实质冲突时允许自动晋升 |
+| `access.preferred` | enum，必填 | `obsidian-cli`：优先使用 Obsidian CLI（需 Obsidian 运行中）。`filesystem`：直接文件系统读写 |
+| `access.vault_name` | string | 当 preferred 为 `obsidian-cli` 时必填，值为 Obsidian 中注册的 Vault 名称 |
+| `access.fallback` | enum | `filesystem`：CLI 不可用或报错时回退到文件系统。不声明则 CLI 失败时停止操作 |
+
+### 披露与同步边界
+
+- 在获授权的当前对话中，可向有权访问者回答并引用完成任务所需的最少原文；不因标为private就禁止本人查看自己的知识。confidential/internal仍须符合组织的访问和环境规则。
+- 已批准的私有Git远端可按该库授权同步，不为每次推送重复确认。sensitivity本身不授予推送权限；不能据此上传到其他服务、公共仓库或新的远端。用户授权也不能替代组织权限。
+- 跨库转存的原文、摘要、实体名称、ID和链接都属于披露，须有明确跨库授权并符合来源库策略。改写或只保留引用不自动解除边界；不得把个人库的持续授权套到公司库。
+
 文件系统权限才是访问控制。初始化和每次写入前解析所有注册根目录的真实路径：必须存在、相互唯一且不得嵌套；写入目标解析后必须仍位于所选根目录内。
 
 ## 最小结构
@@ -54,7 +76,68 @@ vault-root/
 └── log.md           # 只追加操作日志
 ```
 
-不要预建复杂分类，也不要在初始化时扫描或导入资产。`KNOWLEDGE.md` 至少说明收录范围、排除项、敏感边界、权威来源、`write_policy`、`promotion_policy` 和访问方式。`INDEX.md`用于知识路由，可链接TODO但不复制任务明细。
+不要预建复杂分类，也不要在初始化时扫描或导入资产。
+
+### KNOWLEDGE.md 最小模板
+
+```markdown
+# <Vault 显示名称>
+
+## 范围
+<!-- 收录什么、不收录什么 -->
+
+## 所有权与边界
+<!-- 谁维护、敏感边界、哪些内容不落值只记引用 -->
+
+## 权威来源
+<!-- 事实以什么为准：代码、PRD、用户确认等 -->
+
+## 策略
+- write_policy: <与注册表一致>
+- promotion_policy: <与注册表一致>
+
+## 访问方式
+- preferred: <obsidian-cli / filesystem>
+- vault_name: <Obsidian 中的 Vault 名称>（如适用）
+
+## Git
+<!-- 远端仓库、分支策略、推送规则；无 Git 则注明 -->
+```
+
+策略字段与注册表保持一致，KNOWLEDGE.md 中可补充更具体的规则说明（如"架构页必须经团队确认后才更新"）。
+
+### INDEX.md 最小示例
+
+```markdown
+# 知识索引
+
+## 项目
+| 项目 ID | 摘要 | 项目卡 |
+|---------|------|--------|
+| personal.project.my-app | 个人工具应用 | [PROJECT.md](knowledge/projects/personal.project.my-app/PROJECT.md) |
+
+## 知识主题
+| 主题 | 入口 |
+|------|------|
+| OAuth 接入模式 | [oauth-patterns.md](knowledge/oauth-patterns.md) |
+
+## 复用资产
+| 资产 | 位置 |
+|------|------|
+| 品牌色板 | [brand-colors.md](knowledge/brand-colors.md) |
+```
+
+INDEX.md 是路由表而非内容副本。项目条目链接到项目卡，知识主题链接到正式页，复用资产链接到资产描述。不在此复制任务明细（TODO.md 是独立入口）。
+
+### log.md 格式
+
+```markdown
+# 操作日志
+
+- <YYYY-MM-DD> | <操作类型：create/update/promote/archive> | <目标页路径> | <一句话说明> | <commit 短哈希（如有）>
+```
+
+每次写入操作追加一条，同一次操作涉及多个文件合并为一条。不记录纯查询。
 
 Obsidian 模式按 [obsidian.md](obsidian.md) 验证注册；基础能力不依赖社区插件。Git内容同步排除整个`.obsidian/`、缓存和本机状态；初始化Git/创建远端需用户授权，已有持续提交/推送规则则按 [git.md](git.md) 执行，不重复询问。
 
