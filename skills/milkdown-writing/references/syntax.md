@@ -1,6 +1,6 @@
 # 当前 Milkdown 语法与微信导出规则
 
-验证日期：2026-10-13。当前 Pipeline 导出链路使用 `commonmark + gfm + getCombinedMilkdownPlugins()`；自定义包为 `@akairos/milkdown-article-plugins@0.1.3`，共享样式为 `@akairos/milkdown-article-style@0.1.1`。以下是这条链路的写作能力，不代表所有 Milkdown 宿主都安装了相同功能。
+核对日期：2026-10-15。Pipeline 0.19.0 可使用内置导出或 myno 0.3.0 浏览器排版入口，两者均使用 `commonmark + gfm + getCombinedMilkdownPlugins()`。本次发布的锁文件使用语法插件 0.1.6、共享样式 0.1.2；各消费方依赖范围和安装结果可能不同，以各自清单及锁文件为准。语法实现见 [Milkdown Article Plugins](https://github.com/k7airos/milkdown-article-plugins)，正文工作台见 [myno](https://github.com/k7airos/myno)，发布与微信限制见 [Pipeline](https://github.com/k7airos/zzhub-pipeline)。
 
 按需查阅：基础 Markdown、篇章卡片、提示块、行内扩展、图片、微信导出边界、维护依据。基础语法可用不等于文章必须采用列表等结构；配合作者已有的写作风格使用。
 
