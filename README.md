@@ -16,6 +16,7 @@ Official Agent Skills for the Kairos & `zzhub-pipeline` publishing ecosystem.
 | **`milkdown-writing`** | [`skills/milkdown-writing/`](skills/milkdown-writing/SKILL.md) | **正文语法与微信导出规则**<br>按 myno / Pipeline 共享语法写作和整理 Markdown，按需使用导读、互动卡、Callout、高亮、快捷键与徽章；与样式配置、封面渲染和发布操作分工明确。 |
 | **`zzhub-publish`** | [`skills/zzhub-publish/`](skills/zzhub-publish/SKILL.md) | **内容发布任务编排**<br>按 `status → next_action` 准备正文、审核修订、渲染并写入草稿箱，也支持博客和多目标。包含 myno 可选正文插件、独立样式 JSON、Typeset 本地插件、运行时素材及失败恢复说明。 |
 | **`auto-ai-daily`** | [`skills/auto-ai-daily/`](skills/auto-ai-daily/SKILL.md) | **AI 资讯自动草稿流程**<br>使用 AIHOT v1 API 获取最近 24 小时最多五条精选，基于可核验来源写稿，自检后按状态机串行写入指定公众号草稿箱；不创建定时任务、不群发。 |
+| **`herdr-workbench-theme`** | [`skills/herdr-workbench-theme/`](skills/herdr-workbench-theme/SKILL.md) | **herdr TUI 工作台主题**<br>配置 herdr 的 akairos-design 品牌紫配色、侧栏行布局、「目录 · 分支」自定义字段、标签栏、通知与弹窗快捷键，并同步 Ghostty 配色。**仅在 macOS + Ghostty 上测试过**，其他终端与系统未验证。 |
 
 ---
 

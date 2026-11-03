@@ -1,0 +1,108 @@
+# herdr 配置模板：akairos-design 工作台主题
+# 合并进 ~/.config/herdr/config.toml，不要整份覆盖用户已有配置。
+# 验证环境：macOS + Ghostty 1.4.0 + herdr 0.9.5。
+
+# 中性色取自 akairos-design 工作台外观，强调色与危险色取自 @akairos/design。
+# 固定深色：auto_switch=false 时只有顶层 [theme.custom] 生效。
+# 想跟随终端明暗：auto_switch 改回 true，顶层作深色、[theme.custom.light] 叠加浅色。
+[theme]
+name = "catppuccin"
+auto_switch = false
+dark_name = "catppuccin"
+light_name = "catppuccin-latte"
+
+[theme.custom]
+accent = "#AD7AEE"          # --brand（深色）
+panel_bg = "#0a0a0a"        # --family-bg
+sidebar_bg = "#111111"      # --family-surface
+surface_dim = "#0a0a0a"
+active_row_bg = "#291c3c"   # --brand-wash
+selection_bg = "#3c1777"    # brand-900
+surface0 = "#1c1c1c"        # --family-surface-raised
+surface1 = "#333333"        # --family-border
+overlay0 = "#737373"
+overlay1 = "#a3a3a3"        # --family-text-muted
+text = "#ededed"            # --family-text
+subtext0 = "#c4c4c4"        # --family-text-secondary
+mauve = "#c098f0"           # --brand-strong
+red = "#ff7a80"             # --danger
+green = "#7ccf9b"           # 以下五色非包内令牌，为配套自选
+yellow = "#e8c468"
+blue = "#7ba7f2"
+teal = "#5cc8c0"
+peach = "#f0a070"
+
+[theme.custom.light]
+accent = "#750EE4"          # --brand（浅色）
+panel_bg = "#fafafa"        # --family-bg
+sidebar_bg = "#f5f5f5"      # --family-surface-raised
+surface_dim = "#f0f0f0"
+active_row_bg = "#f1e8fb"   # --brand-wash
+selection_bg = "#e6d3fc"    # brand-200
+surface0 = "#e5e5e5"        # --family-border
+surface1 = "#d4d4d4"
+overlay0 = "#a3a3a3"
+overlay1 = "#6b6b6b"        # --family-text-muted
+text = "#171717"            # --family-text
+subtext0 = "#404040"        # --family-text-secondary
+mauve = "#6207c5"           # --brand-strong
+red = "#d13f45"             # --danger
+green = "#1f8a4c"
+yellow = "#9a6b00"
+blue = "#2f6fd0"
+teal = "#0f8a85"
+peach = "#c2570c"
+
+[ui]
+pane_borders = "always"
+pane_outer_borders = true
+show_agent_labels_on_pane_borders = true
+status_indicators = "symbols"
+
+# 侧栏加宽：容纳「目录 · 分支」
+sidebar_width = 40
+sidebar_min_width = 30
+sidebar_max_width = 52
+
+# 标签栏：始终显示（单标签也显示，便于点「+ new tab」），右侧显示缩放标记与时间
+hide_tab_bar_when_single_tab = false
+tab_bar_right = [
+  { type = "zoom" },
+  { type = "datetime", format = "%H:%M" },
+]
+tab_bar_right_separator = "  "
+
+# 侧栏 agent 行 = 状态+项目名+状态文字 / 目录·分支($loc) / 终端标题
+# $loc 由 report-location.sh 推送；没有它时，去掉 ["$loc"] 这一行。
+[ui.sidebar.agents]
+row_gap = 0
+rows = [["state_icon", "workspace", "state_text"], ["$loc"], ["terminal_title_stripped"]]
+
+# 侧栏空间行 = 状态+项目名 / 分支+git 状态
+[ui.sidebar.spaces]
+row_gap = 0
+rows = [["state_icon", "workspace"], ["branch", "git_status"]]
+
+# 后台 agent 完成或需要确认时，只在 herdr 内弹提示，不发系统通知
+[ui.toast]
+delivery = "herdr"
+delay_seconds = 1
+
+[ui.toast.herdr]
+position = "bottom-right"
+
+# 可选：弹窗工具快捷键。需要已安装对应工具，路径按本机调整。
+# 只验证了配置被接受，未实际按键试过。
+[[keys.command]]
+key = "prefix+alt+g"
+type = "popup"
+command = "lazygit"
+width = "85%"
+height = "85%"
+
+[[keys.command]]
+key = "prefix+alt+b"
+type = "popup"
+command = "btop"
+width = "85%"
+height = "85%"
